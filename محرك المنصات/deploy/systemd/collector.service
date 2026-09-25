@@ -1,0 +1,24 @@
+[Unit]
+Description=Institutional Trading System - Bybit Platform Engine
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=its
+Group=its
+WorkingDirectory=/opt/institutional-trading-system
+EnvironmentFile=/etc/institutional-trading-system/collector.env
+ExecStart=/usr/bin/node /opt/institutional-trading-system/dist/محرك المنصات/src/index.js
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGINT
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/institutional-trading-system
+
+[Install]
+WantedBy=multi-user.target
