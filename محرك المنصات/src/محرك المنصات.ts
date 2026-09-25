@@ -246,9 +246,20 @@ export class PlatformEngine {
     const bids = Array.isArray(item.b) ? item.b as string[][] : [];
     const asks = Array.isArray(item.a) ? item.a as string[][] : [];
 
+    const incomingUpdateId = Number(item.u);
     if (type === "snapshot") {
       this.book.bids.clear();
       this.book.asks.clear();
+    } else if (Number.isFinite(incomingUpdateId) && this.book.updateId !== null) {
+      if (incomingUpdateId <= this.book.updateId) return;
+      if (incomingUpdateId > this.book.updateId + 1) {
+        logger.warn({
+          previousUpdateId: this.book.updateId,
+          incomingUpdateId
+        }, "orderbook update gap detected; requesting REST snapshot");
+        await this.recoverOrderbook();
+        return;
+      }
     }
     this.applyLevels(this.book.bids, bids);
     this.applyLevels(this.book.asks, asks);
@@ -303,6 +314,37 @@ export class PlatformEngine {
       raw: item,
       observed_at: nowIso()
     }, "event_id");
+  }
+
+  private async recoverOrderbook(): Promise<void> {
+    try {
+      const snapshot = await this.rest.getOrderbook();
+      this.book.bids.clear();
+      this.book.asks.clear();
+      this.applyLevels(this.book.bids, snapshot.b);
+      this.applyLevels(this.book.asks, snapshot.a);
+      this.book.updateId = snapshot.u;
+      this.book.sequence = snapshot.seq;
+      this.book.matchingEngineTime = snapshot.cts;
+      this.book.eventTime = snapshot.ts;
+      this.storage.enqueue("market_orderbook_state", {
+        category: config.bybit.category,
+        symbol: config.bybit.symbol,
+        event_time_ms: snapshot.ts,
+        update_id: snapshot.u,
+        cross_sequence: snapshot.seq,
+        matching_engine_time_ms: snapshot.cts,
+        bids: snapshot.b,
+        asks: snapshot.a,
+        updated_at: nowIso()
+      }, "category,symbol");
+      await this.storage.flush();
+      this.health.restSuccess();
+      logger.info({ updateId: snapshot.u }, "orderbook restored from REST snapshot");
+    } catch (error) {
+      this.health.error(error);
+      logger.error({ error: String(error) }, "orderbook REST recovery failed");
+    }
   }
 
   private applyLevels(target: Map<string, string>, levels: string[][]): void {
