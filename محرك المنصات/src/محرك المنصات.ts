@@ -189,25 +189,21 @@ export class PlatformEngine {
     if (!Number.isFinite(start) || !Number.isFinite(end)) return;
 
     const row = {
-      category: config.bybit.category,
-      symbol: config.bybit.symbol,
-      series: "last",
-      interval,
-      start_time_ms: start,
-      end_time_ms: end,
+      source: "BYBIT",
+      instrument: config.bybit.symbol,
+      timeframe: interval,
+      time_ms: start,
       open: String(item.open ?? ""),
       high: String(item.high ?? ""),
       low: String(item.low ?? ""),
       close: String(item.close ?? ""),
       volume: String(item.volume ?? ""),
-      turnover: String(item.turnover ?? ""),
-      confirm: Boolean(item.confirm),
-      source_timestamp_ms: observed,
-      updated_at: nowIso()
+      confirmed: Boolean(item.confirm),
+      observed_at: nowIso()
     };
 
     this.latestCandles.set(interval, row);
-    this.storage.enqueue("market_candles", row, "category,symbol,series,interval,start_time_ms");
+    this.storage.enqueue("market_candles", row, "source,instrument,timeframe,time_ms");
     if (config.storage.rawEvents) {
       this.storage.enqueue("market_raw_events", {
         event_id: eventId(topic, data),
@@ -445,21 +441,17 @@ export class PlatformEngine {
           ] as const) {
             for (const row of await this.rest.getSecondaryKlines(path, interval, 2)) {
               this.storage.enqueue("market_candles", {
-                category: config.bybit.category,
-                symbol: config.bybit.symbol,
-                series,
-                interval,
-                start_time_ms: row.startTime,
-                end_time_ms: row.endTime,
+                source: "BYBIT_" + series.toUpperCase(),
+                instrument: config.bybit.symbol,
+                timeframe: interval,
+                time_ms: row.startTime,
                 open: row.open,
                 high: row.high,
                 low: row.low,
                 close: row.close,
-                volume: null,
-                turnover: null,
-                confirm: row.endTime < Date.now(),
-                source_timestamp_ms: Date.now(),
-                updated_at: nowIso()
+                volume: 0,
+                confirmed: row.endTime < Date.now(),
+                observed_at: nowIso()
               }, "category,symbol,series,interval,start_time_ms");
             }
           }
