@@ -1,0 +1,53 @@
+openapi: 3.0.3
+info:
+  title: Institutional Trading System - Bybit Readonly API
+  version: 1.0.0
+  description: Read-only access to the live Bybit market collector.
+servers:
+  - url: https://YOUR-DOMAIN.example.com
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      security: []
+      summary: Collector health
+      responses:
+        "200":
+          description: Current health state
+  /live:
+    get:
+      summary: Live market snapshot
+      responses:
+        "200":
+          description: Current ticker, candles, orderbook and health
+  /ticker:
+    get:
+      summary: Latest ticker
+      responses:
+        "200":
+          description: Latest merged ticker
+  /candles:
+    get:
+      summary: Recent last-price candles
+      parameters:
+        - name: interval
+          in: query
+          schema:
+            type: string
+            example: "15"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 200
+      responses:
+        "200":
+          description: Recent candles
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
