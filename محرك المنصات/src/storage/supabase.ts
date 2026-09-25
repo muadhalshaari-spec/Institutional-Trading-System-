@@ -73,11 +73,10 @@ export class Storage {
     const result = await this.client
       .from("market_candles")
       .select("*")
-      .eq("category", config.bybit.category)
-      .eq("symbol", config.bybit.symbol)
-      .eq("series", "last")
-      .eq("interval", interval)
-      .order("start_time_ms", { ascending: false })
+      .eq("source", "BYBIT")
+      .eq("instrument", config.bybit.symbol)
+      .eq("timeframe", interval)
+      .order("time_ms", { ascending: false })
       .limit(Math.min(limit, 1000));
 
     if (result.error) throw new Error(result.error.message);
