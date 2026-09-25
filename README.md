@@ -29,7 +29,7 @@ GitHub يحفظ الكود فقط. بيئة التشغيل السحابية (م�
 2. ضع مفاتيح Supabase للخادم فقط.
 3. ثبّت Node.js 22 LTS أو أحدث.
 4. شغّل migration الموجود في `محرك المنصات/sql/schema.sql`.
-5. ثبّت الحزم: `npm ci`.
+5. ثبّت الحزم: `npm install`.
 6. ابنِ المشروع: `npm run build`.
 7. ابدأ: `npm start`.
 8. للتشغيل الدائم على Ubuntu استخدم `محرك المنصات/deploy/systemd/collector.service`.
