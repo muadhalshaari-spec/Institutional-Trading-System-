@@ -2,6 +2,7 @@ import WebSocket from "ws";
 import { config } from "../config.js";
 import { boundedBackoff, sleep } from "../utils.js";
 import { logger } from "../logger.js";
+import { z } from "zod";
 
 export type WsHandler = (message: Record<string, unknown>) => Promise<void> | void;
 export type WsStatusHandler = (connected: boolean) => Promise<void> | void;
@@ -54,7 +55,8 @@ export class BybitPublicWs {
 
     ws.on("message", (data) => {
       try {
-        const parsed = JSON.parse(data.toString()) as Record<string, unknown>;
+        const raw = JSON.parse(data.toString()) as unknown;
+        const parsed = z.record(z.string(), z.unknown()).parse(raw);
         void this.onMessage(parsed);
       } catch (error) {
         logger.warn({ error: String(error) }, "invalid websocket message");
