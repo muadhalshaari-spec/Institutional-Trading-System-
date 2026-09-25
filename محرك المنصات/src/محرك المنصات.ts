@@ -5,6 +5,7 @@ import { Storage } from "./storage/supabase.js";
 import { Health } from "./health.js";
 import { eventId } from "./utils.js";
 import { logger } from "./logger.js";
+import { klineItemSchema, liquidationSchema, orderbookSchema, tradeItemSchema } from "./schemas.js";
 import { bootstrapMarket, reconcileLatest } from "./recovery.js";
 
 type Book = {
@@ -178,7 +179,9 @@ export class PlatformEngine {
 
   private async handleKline(topic: string, data: unknown): Promise<void> {
     if (!Array.isArray(data) || data.length === 0) return;
-    const item = data[0] as Record<string, unknown>;
+    const parsed = klineItemSchema.array().safeParse(data);
+    if (!parsed.success) throw new Error("invalid kline payload: " + parsed.error.message);
+    const item = parsed.data[0];
     const interval = String(item.interval ?? topic.split(".")[1] ?? "");
     const start = Number(item.start);
     const end = Number(item.end);
@@ -218,7 +221,9 @@ export class PlatformEngine {
 
   private async handleTrade(topic: string, data: unknown): Promise<void> {
     if (!Array.isArray(data)) return;
-    for (const item of data as Array<Record<string, unknown>>) {
+    const parsed = tradeItemSchema.array().safeParse(data);
+    if (!parsed.success) throw new Error("invalid trade payload: " + parsed.error.message);
+    for (const item of parsed.data) {
       const id = String(item.execId ?? item.i ?? eventId(topic, item));
       const tradeTime = Number(item.time ?? item.T ?? Date.now());
       const row = {
@@ -241,7 +246,9 @@ export class PlatformEngine {
 
   private async handleOrderbook(topic: string, data: unknown): Promise<void> {
     if (!data || typeof data !== "object") return;
-    const item = data as Record<string, unknown>;
+    const validation = orderbookSchema.safeParse(data);
+    if (!validation.success) throw new Error("invalid orderbook payload: " + validation.error.message);
+    const item = validation.data;
     const type = String(item.type ?? messageTypeFallback(topic));
     const bids = Array.isArray(item.b) ? item.b as string[][] : [];
     const asks = Array.isArray(item.a) ? item.a as string[][] : [];
@@ -302,7 +309,9 @@ export class PlatformEngine {
 
   private async handleLiquidation(topic: string, data: unknown): Promise<void> {
     if (!data || typeof data !== "object") return;
-    const item = data as Record<string, unknown>;
+    const validation = liquidationSchema.safeParse(data);
+    if (!validation.success) throw new Error("invalid liquidation payload: " + validation.error.message);
+    const item = validation.data;
     this.storage.enqueue("market_liquidations", {
       event_id: eventId(topic, item),
       category: config.bybit.category,
